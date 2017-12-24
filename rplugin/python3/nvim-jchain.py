@@ -30,8 +30,10 @@ class Main(object):
         index = 0
         # Prompt if there are more items
         if len(constructors) > 1:
-            choices = "\n&".join(["{}. {}".format(i+1, r) for i, r in\
-                                  enumerate(constructors)])
+            # Join the constructors as choices, add an ordinal
+            # and filter no-arg constructor from choices
+            choices = "\n&".join(["{}. {}".format(i+1, str(r)[5:-2]) for i, r in\
+                      enumerate(constructors) if r.text != "this();"])
             self.nvim.command('call inputsave()')
             command = "let user_input = confirm('Choose a constructor to chain', '&{}', 1)".format(choices)
             self.nvim.command(command)
