@@ -14,23 +14,21 @@ class Main(object):
     @neovim.function('ChainConstructor')
     def chainConstructor(self, args):
         buff = self.nvim.current.buffer
-        # Get current consructor
         row, col = self.nvim.current.window.cursor
         directory, filename_long = os.path.split(self.nvim.eval("@%"))
         filename_short, extension = os.path.splitext(filename_long)
         class_name = filename_short.title()
 
-        # current_constructor = self.get_current_constructor(row,\
-                                                           # filename_short.title())
         current_constructor = Constructor.get_current_constructor(row,\
                                                    class_name, buff)
-
         constructors = Constructor.get_all_constructors(class_name, buff)
         constructors.remove(current_constructor)
 
         if not constructors:
             return
+        # Default to first item
         index = 0
+        # Prompt if there are more items
         if len(constructors) > 1:
             choices = "\n&".join(["{}. {}".format(i+1, r) for i, r in\
                                   enumerate(constructors)])
@@ -39,59 +37,17 @@ class Main(object):
             self.nvim.command(command)
             self.nvim.command('call inputrestore()')
             index = self.nvim.eval('user_input') - 1
+            # Cancel in vim
             if index == -1:
                 return
+
         result = str(constructors[index])
-        # indentation = len(buff[row-1]) - len(buff[row-1].lstrip())
+        # Indentation
         indentation = buff[row-1].count(INDENT_CHAR)
         if 'public' in buff[row-1]:
             indentation += 1
+        # Append result
         buff.append((INDENT_CHAR * indentation) + result, row)
-        # message = " ".join([str(c) for c in constructors])
-        # command = 'echom "{}"'.format(message)
-        # self.nvim.command(command)
-
-    def get_current_constructor(self, row, class_name):
-        pattern = r"public " + re.escape(class_name)
-        # pattern = r"public \w*(((\w+ \w+(, |\)))+)"
-        # pattern = r"public " + re.escape(class_name) +  r"(((\w+ \w+(, |\)))+)"
-        prog = re.compile(pattern)
-        current_constructor = None
-        start = 7
-        while (current_constructor is None):
-            if (prog.search(self.buff[row])):
-                line = self.buff[row]
-                return line#[row_pos].strip()[start:]
-            if (row == 0):
-                return
-            row -= 1
-
-    # def get_all_constructors(self)
-
-    def parse_constructor(self, line, class_name):
-        # pattern = r"public " + re.escape(class_name) +  r"(((\w+ \w+(, |\)))+)"
-        # pattern = r"public \w\((\w (\w),?)+\)"
-        # pattern = r"public " + re.escape(class_name) + r"\(((\w+ \w+(, |\)))+)"
-        # prog = re.compile(pattern)
-        # match = prog.search(line)
-        # if match:
-            # arguments = match.group(1).split(',')
-            # # get only variable names
-            # variable_names = [a.split(" ")[1] for a in arguments]
-            # return "this({});".format(", ".join(variable_names))
-        # return
-
-        pattern = r"public " + re.escape(class_name) + r"\(((\w+ \w+(, |\)))+)"
-        prog = re.compile(pattern)
-        line = "public Werknemer(String naam, int salaris){"
-        match = prog.search(line)
-        if match:
-            arguments = match.group(1)\
-                            .replace(')', '')\
-                            .split(',')
-            # Filter out variable names
-            variable_names = [argument.strip().split(" ")[1] for argument in arguments]
-            return "this({});".format(", ".join(variable_names))
 
 
 class Constructor:
@@ -102,6 +58,9 @@ class Constructor:
             self.text = self.parse(line)
 
     def parse(self, line):
+        """
+        Take a line, return the string to call the constructor
+        """
         pattern = r"public " + re.escape(self.class_name) + r"\(((\w+ \w+(, |\)))*)"
         prog = re.compile(pattern)
         match = prog.search(line)
