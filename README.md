@@ -1,4 +1,4 @@
-# Show Constructor
+# Chain Constructor for java
 
 Thanks to /jacobsimpson/nvim-example-python-plugin for the neovim plugin template.
 
