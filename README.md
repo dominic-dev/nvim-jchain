@@ -29,3 +29,11 @@ Use the following command
 :ChainConstructor
 ```
 or map it to your favorite shortkeys
+
+### Settings
+Does not include no-arg constructors by default.
+To change this behaviour include:
+```VimL
+let g:jchain_include_noargs = 1
+```
+in your init.vim file
