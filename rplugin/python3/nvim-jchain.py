@@ -27,6 +27,8 @@ class Main(object):
         # Get constructors
         current_constructor = Constructor.get_current_constructor(row,\
                                                    class_name, buff)
+        if not current_constructor:
+            return;
         constructors = Constructor.get_all_constructors(class_name, buff,\
                                                     include_noargs=include_noargs)
         if current_constructor.text != 'this();':
@@ -53,19 +55,21 @@ class Main(object):
                 return
 
         result = str(constructors[index])
+        if not result:
+            return
         # Indentation
         indentation = get_indentation(line)
         # Append result
-        buff.append(indentation + result, row)
+        buff.append(indentation + result, current_constructor.row+1)
 
 class Constructor:
-    def __init__(self, class_name, line=None):
+    def __init__(self, class_name, line=None, row=None):
         self.class_name = class_name
         self.text = ""
+        self.row = row
         if line:
             self.text = self.parse(line)
             self.preview = self.parse_preview(line)
-
 
     def parse(self, line):
         """
@@ -107,18 +111,6 @@ class Constructor:
         """
         return Constructor._get_constructors_from_text(class_name, text, row,
                                     end=0, step=-1, first_match_only=True)
-        pattern = r"public " + re.escape(class_name)
-        prog = re.compile(pattern)
-        current_constructor = None
-        start = 7
-        while current_constructor is None:
-            if prog.search(text[row]):
-                line = text[row]
-                # return line#[row_pos].strip()[start:]
-                return Constructor(class_name, line)
-            if row == 0:
-                return
-            row -= 1
 
     @staticmethod
     def get_all_constructors(class_name, text, include_noargs=False):
@@ -129,7 +121,7 @@ class Constructor:
 
     @staticmethod
     def _get_constructors_from_text(class_name, text, start=0, end=None,
-                                    step=1, first_match_only=False):
+                        step=1, first_match_only=False):
         """
         Take text and return constructors
         Arguments:
@@ -149,7 +141,7 @@ class Constructor:
         row = start
         while row != end:
             if prog.search(text[row]):
-                constructor = Constructor(class_name, text[row])
+                constructor = Constructor(class_name, text[row] ,row)
                 if first_match_only:
                     return constructor
                 result.append(constructor)
