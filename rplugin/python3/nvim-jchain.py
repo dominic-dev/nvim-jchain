@@ -81,7 +81,7 @@ class Main(object):
             if arguments:
                 top += ", "
             top += ", ".join([str(a) for a in constructor_arguments])
-        top +=  ") {"
+        top +=  ") {\n"
 
         first_line = indentation*2 + constructor.text
         middle = "\n".join([indentation * 2 + "this.{0} = {0};".format(a.name)for a in arguments])
@@ -171,15 +171,18 @@ class Constructor:
         pattern = r"public " + re.escape(self.class_name) + r"\(((\w+ \w+(, |\)))*)"
         prog = re.compile(pattern)
         match = prog.search(line)
+        variable_names = []
+
         if match:
             if match.group(1):
                 arguments = match.group(1)\
                                 .replace(')', '')\
                                 .split(',')
                 # Filter out variable names
-                variable_names = [argument.strip().split(" ")[1] for argument in arguments]
-            else:
-                variable_names = []
+                for argument in arguments:
+                    words = argument.strip().split(" ")
+                    if len(words) > 1:
+                        variable_names.append(words[1])
             return "this({});".format(", ".join(variable_names))
 
     def parse_preview(self, line):
@@ -296,8 +299,7 @@ class Argument:
                          .replace(')', '')\
                          .split(',')
         for a in arguments:
-            print('a', a.split(' '))
-            type_,  name = a.split(' ')
+            type_,  name = a.strip().split(' ')
             a = Argument(type_, name)
         return arguments
 
