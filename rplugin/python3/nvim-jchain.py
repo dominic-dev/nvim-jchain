@@ -53,6 +53,48 @@ class Main(object):
         self.return_constructors(constructors, current_constructor)
 
 
+    @neovim.function('GenerateConstructor')
+    def generate_constructor(self, args):
+        """
+        Generate a constructor
+        """
+        buff, row = self._get_context()
+        class_name = self._get_class_name()
+        (row_begin, col_begin) = buff.mark('<')
+        (row_end, col_end) = buff.mark('>')
+        lines = self.nvim.eval('getline({}, {})'.format(row_begin, row_end))
+        for line in lines:
+            self.nvim.command('echom "'+line+'"')
+
+        arguments = []
+        for line in lines:
+            arguments.append(Argument(*line.strip().split(' ')))
+
+        constructors = Constructor.get_all_constructors(class_name, buff,\
+                                                include_noargs=True)
+        constructor = self._prompt_constructor(constructors)
+        constructor_arguments = Argument.parse(buff[constructor.row])
+
+        indentation = get_indentation(lines[0])
+        top = '{}public {}({}'.format(indentation, class_name, ", ".join(
+            [str(a) for a in arguments]))
+        if constructor_arguments:
+            if arguments:
+                top += ", "
+            top += ", ".join([str(a) for a in constructor_arguments])
+        top +=  ") {"
+
+        first_line = indentation*2 + constructor.text
+        middle = "\n".join([indentation * 2 + "this.{0} = {0};".format(a.name)for a in arguments])
+        bottom = indentation + '}'
+
+        result = "\n".join([top, first_line, middle, bottom])
+        if not result:
+            return
+        del buff[row_begin-1:row_end]
+        buff.append(result.split("\n"), row_begin)
+
+
     @neovim.function('ChainSuper')
     def superConstructor(self, args):
         """
@@ -75,6 +117,7 @@ class Main(object):
                                                     include_noargs=True)
         self.return_constructors(constructors, current_constructor)
 
+
     def return_constructors(self, constructors, current_constructor):
         """
         Take a list of constructors and the current constructor
@@ -83,6 +126,19 @@ class Main(object):
         """
         if not constructors:
             return
+
+        constructor = self._prompt_constructor(constructors)
+        result = str(constructor)
+        if not result:
+            return
+        # Indentation
+        indentation = get_indentation(self._get_current_line())
+        if indentation is None:
+            indentation = ''
+        # Append result
+        self.nvim.current.buffer.append(indentation + result, current_constructor.row+1)
+
+    def _prompt_constructor(self, constructors):
         # Default to first item
         index = 0
         # Prompt if there are more items
@@ -98,16 +154,7 @@ class Main(object):
             # Cancel in vim
             if index == -1:
                 return
-
-        result = str(constructors[index])
-        if not result:
-            return
-        # Indentation
-        indentation = get_indentation(self._get_current_line())
-        if indentation is None:
-            indentation = ''
-        # Append result
-        self.nvim.current.buffer.append(indentation + result, current_constructor.row+1)
+        return constructors[index]
 
 class Constructor:
     def __init__(self, class_name, line=None, row=None):
@@ -224,6 +271,37 @@ class SuperClass:
         for r in result:
             r.text = r.text.replace('this(', 'super(')
         return result
+
+class Argument:
+    def __init__(self, type_, name):
+        self.type = type_
+        self.name = name
+
+    def __str__(self):
+        return "{} {}".format(self.type, self.name)
+
+    @staticmethod
+    def parse(line):
+        """
+        Take a line, return a list of arguments
+        """
+        pattern = r"public .*\(((\w+ \w+(, |\)))*)"
+        prog = re.compile(pattern)
+        match = prog.search(line)
+        arguments = []
+        if not match:
+            return
+        if not match.group(1):
+            return
+        arguments = match.group(1)\
+                         .replace(')', '')\
+                         .split(',')
+        for a in arguments:
+            print('a', a.split(' '))
+            type_,  name = a.split(' ')
+            a = Argument(type_, name)
+        return arguments
+
 
 def get_indentation(line):
     """
