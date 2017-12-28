@@ -34,8 +34,16 @@ Insert the call to another constructor, with the apropriate variables.
 ```VimL
 :ChainSuper
 ```
-
 Insert the call to a super constructor, with the apropriate variables.
+
+#### GenerateConstructor
+```VimL
+:GenerateConstructor
+```
+
+TODO
+Documentation needed.
+
 
 ### Settings
 For same level constructors no-arg constructors are excluded by default.
