@@ -90,8 +90,8 @@ class Main(object):
         result = "\n".join([top, first_line, middle, bottom])
         if not result:
             return
-        del buff[row+1]
-        buff.append(result.split("\n"), row_begin)
+        del buff[row-1]
+        buff.append(result.split("\n"), row-1)
 
 
     @neovim.function('ChainSuper')
