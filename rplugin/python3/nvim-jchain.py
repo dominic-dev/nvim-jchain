@@ -12,87 +12,45 @@ class Main(object):
         self.row, col = nvim.current.window.cursor
         self.line = self.buff[self.row-1]
         self.directory = self.nvim.eval("expand('%:p:h')")
+        filename_long = self.nvim.eval("expand('%:t')")
+        filename_short, extension = os.path.splitext(filename_long)
+        self.class_name = filename_short.title()
 
     @neovim.function('ChainConstructor')
     def chainConstructor(self, args):
-        buff = self.nvim.current.buffer
-        row, col = self.nvim.current.window.cursor
-        line = buff[row-1]
-        filename_long = self.nvim.eval("expand('%:t')")
-        filename_short, extension = os.path.splitext(filename_long)
-        class_name = filename_short.title()
-
         # Settings
         try:
             include_noargs = self.nvim.eval("g:jchain_include_noargs")
         except:
             include_noargs = False
-
         # Get constructors
-        current_constructor = Constructor.get_current_constructor(row,\
-                                                   class_name, buff)
+        current_constructor = Constructor.get_current_constructor(self.row,\
+                                           self.class_name, self.buff)
         if not current_constructor:
             return;
-        constructors = Constructor.get_all_constructors(class_name, buff,\
-                                                    include_noargs=include_noargs)
+        constructors = Constructor.get_all_constructors(self.class_name, self.buff,\
+                                                include_noargs=include_noargs)
         if current_constructor.text != 'this();':
             constructors.remove(current_constructor)
-
-        # If no matches remain
-        if not constructors:
-            return
-
-        # Default to first item
-        index = 0
-        # Prompt if there are more items
-        if len(constructors) > 1:
-            # Join the constructors as choices, add an ordinal
-            choices = "\n&".join(["{}. {}".format(i+1, r.preview)\
-                          for i, r in enumerate(constructors)])
-            self.nvim.command('call inputsave()')
-            command = "let user_input = confirm('Choose a constructor to chain', '&{}', 1)".format(choices)
-            self.nvim.command(command)
-            self.nvim.command('call inputrestore()')
-            index = self.nvim.eval('user_input') - 1
-            # Cancel in vim
-            if index == -1:
-                return
-
-        result = str(constructors[index])
-        if not result:
-            return
-        # Indentation
-        indentation = get_indentation(line)
-        # Append result
-        buff.append(indentation + result, current_constructor.row+1)
+        self.return_constructors(constructors, current_constructor)
 
     @neovim.function('ChainSuper')
     def superConstructor(self, args):
         os.chdir(self.directory)
-        filename_long = self.nvim.eval("expand('%:t')")
-        filename_short, extension = os.path.splitext(filename_long)
-        class_name = filename_short.title()
-
-        # Settings
-        try:
-            include_noargs = self.nvim.eval("g:jchain_include_noargs")
-        except:
-            include_noargs = False
-
         # Get super
         super_class = SuperClass(self.buff)
-
         # Get constructors
         current_constructor = Constructor.get_current_constructor(self.row,\
-                                                   class_name, self.buff)
+                                               self.class_name, self.buff)
         if not current_constructor:
             return;
-        constructors = super_class.get_all_constructors(class_name, self.buff,\
-                                                    include_noargs=include_noargs)
-        # If no 
+        constructors = super_class.get_all_constructors(self.class_name, self.buff,\
+                                                    include_noargs=True)
+        self.return_constructors(constructors, current_constructor)
+
+    def return_constructors(self, constructors, current_constructor):
         if not constructors:
             return
-
         # Default to first item
         index = 0
         # Prompt if there are more items
@@ -116,6 +74,7 @@ class Main(object):
         indentation = get_indentation(self.line)
         # Append result
         self.buff.append(indentation + result, current_constructor.row+1)
+
 
 class Constructor:
     def __init__(self, class_name, line=None, row=None):
