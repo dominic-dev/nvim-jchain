@@ -29,6 +29,10 @@ class Main(object):
 
     @neovim.function('ChainConstructor')
     def chainConstructor(self, args):
+        """
+        Insert the call to another constructor
+        Prompt if there is more than one match.
+        """
         buff, row = self._get_context()
         class_name = self._get_class_name()
 
@@ -51,6 +55,10 @@ class Main(object):
 
     @neovim.function('ChainSuper')
     def superConstructor(self, args):
+        """
+        Insert call to a super constructor
+        Prompt if there is more than one match.
+        """
         # Context
         os.chdir(self._get_directory())
         buff, row = self._get_context()
@@ -68,6 +76,11 @@ class Main(object):
         self.return_constructors(constructors, current_constructor)
 
     def return_constructors(self, constructors, current_constructor):
+        """
+        Take a list of constructors and the current constructor
+        Insert another constructor.
+        Prompt if there is more than one match.
+        """
         if not constructors:
             return
         # Default to first item
@@ -222,7 +235,7 @@ def get_indentation(line):
         return
     indentation = match.group(1)
     add_extra_indent = ('public', '}')
-    if any(s in add_extra_indent for s in line):
+    if any(s in line for s in add_extra_indent):
         return indentation + indentation
     return indentation
 
