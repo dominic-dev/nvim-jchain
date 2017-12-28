@@ -60,39 +60,49 @@ class Main(object):
         """
         buff, row = self._get_context()
         class_name = self._get_class_name()
-        (row_begin, col_begin) = buff.mark('<')
-        (row_end, col_end) = buff.mark('>')
-        # lines = self.nvim.eval('getline({}, {})'.format(row_begin, row_end))
-        # for line in lines:
-            # self.nvim.command('echom "'+line+'"')
         line = self._get_current_line()
+        # Arguments are comma separated
         passed_arguments = line.strip().split(',')
+        # Arguments include a type and a name separated by a space
         arguments = [Argument(*(a.strip().split(' '))) for a in passed_arguments]
 
+        # All available constructors
         constructors = Constructor.get_all_constructors(class_name, buff,\
                                                 include_noargs=True)
-        constructor = self._prompt_constructor(constructors)
-        constructor_arguments = Argument.parse(buff[constructor.row])
+        # Choose one
+        chained_constructor = self._prompt_constructor(constructors)
 
+        # Build string
+        # New arguments
+        arguments_string = ", ".join([str(a) for a in arguments])
         indentation = get_indentation(line)
-        top = '{}public {}({}'.format(indentation, class_name, ", ".join(
-            [str(a) for a in arguments]))
+        # Method signature
+        new_constructor_signature = '{}public {}({}'.format(indentation, class_name,
+                                      arguments_string)
+        # Chained constructor arguments
+        constructor_arguments = Argument.parse(buff[chained_constructor.row])
         if constructor_arguments:
             if arguments:
-                top += ", "
-            top += ", ".join([str(a) for a in constructor_arguments])
-        top +=  ") {\n"
+                new_constructor_signature += ", "
+            new_constructor_signature += ", ".join([str(a).strip() for a in constructor_arguments])
+        new_constructor_signature +=  ") {"
 
-        first_line = indentation*2 + constructor.text
+        # Call chained constructor
+        call_to_chained_constructor = indentation*2 + chained_constructor.text
+        # Assign variables
         middle = "\n".join([indentation * 2 + "this.{0} = {0};".format(a.name)for a in arguments])
+        # Close
         bottom = indentation + '}'
 
-        result = "\n".join([top, first_line, middle, bottom])
-        if not result:
+        # Finalize string
+        new_constructor = "\n".join([new_constructor_signature, call_to_chained_constructor, middle, bottom])
+        if not new_constructor:
             return
-        del buff[row-1]
-        buff.append(result.split("\n"), row-1)
 
+        # Remove trigger
+        del buff[row-1]
+        # Insert constructor
+        buff.append(new_constructor.splitlines(), row-1)
 
     @neovim.function('ChainSuper')
     def superConstructor(self, args):
@@ -287,7 +297,7 @@ class Argument:
         """
         Take a line, return a list of arguments
         """
-        pattern = r"public .*\(((\w+ \w+(, |\)))*)"
+        pattern = r"public .*\(((\w+ \w+(, +|\)))*)"
         prog = re.compile(pattern)
         match = prog.search(line)
         arguments = []
@@ -299,10 +309,11 @@ class Argument:
                          .replace(')', '')\
                          .split(',')
         for a in arguments:
-            type_,  name = a.strip().split(' ')
-            a = Argument(type_, name)
+            properties = a.strip(' ').split(' ')
+            if len(properties) == 2:
+                type_, name = properties
+                a = Argument(type_.strip(), name.strip())
         return arguments
-
 
 def get_indentation(line):
     """
