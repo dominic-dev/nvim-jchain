@@ -62,20 +62,19 @@ class Main(object):
         class_name = self._get_class_name()
         (row_begin, col_begin) = buff.mark('<')
         (row_end, col_end) = buff.mark('>')
-        lines = self.nvim.eval('getline({}, {})'.format(row_begin, row_end))
-        for line in lines:
-            self.nvim.command('echom "'+line+'"')
-
-        arguments = []
-        for line in lines:
-            arguments.append(Argument(*line.strip().split(' ')))
+        # lines = self.nvim.eval('getline({}, {})'.format(row_begin, row_end))
+        # for line in lines:
+            # self.nvim.command('echom "'+line+'"')
+        line = self._get_current_line()
+        passed_arguments = line.strip().split(',')
+        arguments = [Argument(*(a.strip().split(' '))) for a in passed_arguments]
 
         constructors = Constructor.get_all_constructors(class_name, buff,\
                                                 include_noargs=True)
         constructor = self._prompt_constructor(constructors)
         constructor_arguments = Argument.parse(buff[constructor.row])
 
-        indentation = get_indentation(lines[0])
+        indentation = get_indentation(line)
         top = '{}public {}({}'.format(indentation, class_name, ", ".join(
             [str(a) for a in arguments]))
         if constructor_arguments:
@@ -91,7 +90,7 @@ class Main(object):
         result = "\n".join([top, first_line, middle, bottom])
         if not result:
             return
-        del buff[row_begin-1:row_end]
+        del buff[row+1]
         buff.append(result.split("\n"), row_begin)
 
 
