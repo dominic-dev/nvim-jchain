@@ -8,43 +8,62 @@ import re
 class Main(object):
     def __init__(self, nvim):
         self.nvim = nvim
-        self.buff = nvim.current.buffer
-        self.row, col = nvim.current.window.cursor
-        self.line = self.buff[self.row-1]
-        self.directory = self.nvim.eval("expand('%:p:h')")
+
+    def _get_context(self):
+        buff = self.nvim.current.buffer
+        row, col = self.nvim.current.window.cursor
+        return (buff, row)
+
+    def _get_current_line(self):
+        buff, row = self._get_context()
+        return buff[row-1]
+
+    def _get_directory(self):
+        return self.nvim.eval("expand('%:p:h')")
+
+    def _get_class_name(self):
         filename_long = self.nvim.eval("expand('%:t')")
         filename_short, extension = os.path.splitext(filename_long)
-        self.class_name = filename_short.title()
+        return filename_short.title()
+
 
     @neovim.function('ChainConstructor')
     def chainConstructor(self, args):
+        buff, row = self._get_context()
+        class_name = self._get_class_name()
+
         # Settings
         try:
             include_noargs = self.nvim.eval("g:jchain_include_noargs")
         except:
             include_noargs = False
         # Get constructors
-        current_constructor = Constructor.get_current_constructor(self.row,\
-                                           self.class_name, self.buff)
+        current_constructor = Constructor.get_current_constructor(row,\
+                                           class_name, buff)
         if not current_constructor:
             return;
-        constructors = Constructor.get_all_constructors(self.class_name, self.buff,\
+        constructors = Constructor.get_all_constructors(class_name, buff,\
                                                 include_noargs=include_noargs)
         if current_constructor.text != 'this();':
             constructors.remove(current_constructor)
         self.return_constructors(constructors, current_constructor)
 
+
     @neovim.function('ChainSuper')
     def superConstructor(self, args):
-        os.chdir(self.directory)
+        # Context
+        os.chdir(self._get_directory())
+        buff, row = self._get_context()
+        class_name = self._get_class_name()
+
         # Get super
-        super_class = SuperClass(self.buff)
+        super_class = SuperClass(buff)
         # Get constructors
-        current_constructor = Constructor.get_current_constructor(self.row,\
-                                               self.class_name, self.buff)
+        current_constructor = Constructor.get_current_constructor(row,\
+                                               class_name, buff)
         if not current_constructor:
             return;
-        constructors = super_class.get_all_constructors(self.class_name, self.buff,\
+        constructors = super_class.get_all_constructors(class_name, buff,\
                                                     include_noargs=True)
         self.return_constructors(constructors, current_constructor)
 
@@ -71,10 +90,11 @@ class Main(object):
         if not result:
             return
         # Indentation
-        indentation = get_indentation(self.line)
+        indentation = get_indentation(self._get_current_line())
+        if indentation is None:
+            indentation = ''
         # Append result
-        self.buff.append(indentation + result, current_constructor.row+1)
-
+        self.nvim.current.buffer.append(indentation + result, current_constructor.row+1)
 
 class Constructor:
     def __init__(self, class_name, line=None, row=None):
@@ -192,17 +212,17 @@ class SuperClass:
             r.text = r.text.replace('this(', 'super(')
         return result
 
-
 def get_indentation(line):
     """
     Take a line, and return its indentation as string
     """
-    pattern = re.compile(r"(.*?)\w")
+    pattern = re.compile(r"(.*?)(\w|\})")
     match = pattern.search(line)
     if not match:
         return
     indentation = match.group(1)
-    if "public" in line:
+    add_extra_indent = ('public', '}')
+    if any(s in add_extra_indent for s in line):
         return indentation + indentation
     return indentation
 
