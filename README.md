@@ -23,15 +23,22 @@ pip3 install neovim
 ```
 
 ### Usage 
-Use the following command
-
+#### ChainConstructor
 ```VimL
 :ChainConstructor
 ```
-or map it to your favorite shortkeys
+Insert the call to another constructor, with the apropriate variables.
+
+
+#### ChainSuper
+```VimL
+:ChainSuper
+```
+
+Insert the call to a super constructor, with the apropriate variables.
 
 ### Settings
-Does not include no-arg constructors by default.
+For same level constructors no-arg constructors are excluded by default.
 To change this behaviour include:
 ```VimL
 let g:jchain_include_noargs = 1
