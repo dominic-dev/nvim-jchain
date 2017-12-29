@@ -71,6 +71,8 @@ class Main(object):
                                                 include_noargs=True)
         # Choose one
         chained_constructor = self._prompt_constructor(constructors)
+        if not chained_constructor:
+            return
 
         # Build string
         # New arguments
