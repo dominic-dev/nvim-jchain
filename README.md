@@ -40,7 +40,7 @@ Insert the call to a super constructor, with the apropriate variables.
 ```VimL
 :GenerateConstructor
 ```
-
+ 
 TODO
 Documentation needed.
 
